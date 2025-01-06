@@ -15,6 +15,7 @@ import System.Exit (ExitCode (..))
 import System.FilePath ((</>))
 import System.Posix.Files (getFileStatus, modificationTime)
 import System.Process
+import Data.List (nub)
 
 -- Function to generate a date string in "YYYY-MM-DD" format with UTC+8 timezone
 generateDateString :: Integer -> IO String
@@ -134,6 +135,16 @@ monthsSinceLastQuarter = do
     today <- getCurrentTime >>= pure . formatTime defaultTimeLocale "%Y-%m-%d"
     return $ monthsBetween startDate today
 
+monthToQuarter :: String -> Integer
+monthToQuarter month =
+    let (year, monthStr) = splitAt 4 month
+        monthInt = read (dropWhile (== '-') monthStr) :: Int
+        quarter = (monthInt - 1) `div` 3 + 1
+    in read year * 10 + toInteger quarter
+
+monthsToQuarters :: [String] -> [Integer]
+monthsToQuarters monthStrs = nub $ map monthToQuarter monthStrs
+
 main :: IO ()
 main = do
     args <- getArgs
@@ -142,5 +153,6 @@ main = do
         ["folder-create", prefix] -> folderCreate prefix
         ["folder-remove", prefix] -> folderRemove prefix
         ["month-between", start, end] -> mapM_ putStrLn (monthsBetween start end)
-        ["month-since-last-quater"] -> monthsSinceLastQuarter >>= mapM_ putStrLn
+        ["month-since-last-quarter"] -> monthsSinceLastQuarter >>= mapM_ putStrLn
+        ["quarter-since-last-quarter"] -> monthsSinceLastQuarter >>= return . monthsToQuarters >>= mapM_ print
         _ -> putStrLn "Not Supported Command"
